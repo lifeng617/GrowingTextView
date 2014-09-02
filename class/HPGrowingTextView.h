@@ -95,8 +95,10 @@
 //uitextview properties
 @property(unsafe_unretained) NSObject<HPGrowingTextViewDelegate> *delegate;
 @property(nonatomic,strong) NSString *text;
+@property(nonatomic,strong) NSAttributedString *attributedText;
 @property(nonatomic,strong) UIFont *font;
 @property(nonatomic,strong) UIColor *textColor;
+@property(nonatomic,strong) NSDictionary *typingAttributes;
 @property(nonatomic) NSTextAlignment textAlignment;    // default is NSTextAlignmentLeft
 @property(nonatomic) NSRange selectedRange;            // only ranges of length 0 are supported
 @property(nonatomic,getter=isEditable) BOOL editable;

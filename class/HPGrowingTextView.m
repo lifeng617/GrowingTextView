@@ -160,26 +160,57 @@
 {
     if(n == 0 && maxHeight > 0) return; // the user specified a maxHeight themselves.
     
-    // Use internalTextView for height calculations, thanks to Gwynne <http://blog.darkrainfall.org/>
-    NSString *saveText = internalTextView.text, *newText = @"-";
+    if (internalTextView.typingAttributes)
+    {
+        NSDictionary *attrs = internalTextView.typingAttributes;
+        // Use internalTextView for height calculations, thanks to Gwynne <http://blog.darkrainfall.org/>
+        NSAttributedString *saveText = internalTextView.attributedText;
+        NSString *newText = @"-";
+        
+        internalTextView.delegate = nil;
+        internalTextView.hidden = YES;
+        
+        for (int i = 1; i < n; ++i)
+            newText = [newText stringByAppendingString:@"\n|W|"];
+        
+        NSAttributedString *newAttrText = [[NSAttributedString alloc] initWithString:newText attributes:attrs];
+        internalTextView.attributedText = newAttrText;
+        
+        maxHeight = [self measureHeight];
+        
+        internalTextView.attributedText = saveText;
+        internalTextView.typingAttributes = attrs;
+        internalTextView.hidden = NO;
+        internalTextView.delegate = self;
+        
+        [self sizeToFit];
+        
+        maxNumberOfLines = n;
+    }
+    else
+    {
+        // Use internalTextView for height calculations, thanks to Gwynne <http://blog.darkrainfall.org/>
+        NSString *saveText = internalTextView.text, *newText = @"-";
+        
+        internalTextView.delegate = nil;
+        internalTextView.hidden = YES;
+        
+        for (int i = 1; i < n; ++i)
+            newText = [newText stringByAppendingString:@"\n|W|"];
+        
+        internalTextView.text = newText;
+        
+        maxHeight = [self measureHeight];
+        
+        internalTextView.text = saveText;
+        internalTextView.hidden = NO;
+        internalTextView.delegate = self;
+        
+        [self sizeToFit];
+        
+        maxNumberOfLines = n;
+    }
     
-    internalTextView.delegate = nil;
-    internalTextView.hidden = YES;
-    
-    for (int i = 1; i < n; ++i)
-        newText = [newText stringByAppendingString:@"\n|W|"];
-    
-    internalTextView.text = newText;
-    
-    maxHeight = [self measureHeight];
-    
-    internalTextView.text = saveText;
-    internalTextView.hidden = NO;
-    internalTextView.delegate = self;
-    
-    [self sizeToFit];
-    
-    maxNumberOfLines = n;
 }
 
 -(int)maxNumberOfLines
@@ -196,27 +227,59 @@
 -(void)setMinNumberOfLines:(int)m
 {
     if(m == 0 && minHeight > 0) return; // the user specified a minHeight themselves.
-
-	// Use internalTextView for height calculations, thanks to Gwynne <http://blog.darkrainfall.org/>
-    NSString *saveText = internalTextView.text, *newText = @"-";
     
-    internalTextView.delegate = nil;
-    internalTextView.hidden = YES;
     
-    for (int i = 1; i < m; ++i)
-        newText = [newText stringByAppendingString:@"\n|W|"];
-    
-    internalTextView.text = newText;
-    
-    minHeight = [self measureHeight];
-    
-    internalTextView.text = saveText;
-    internalTextView.hidden = NO;
-    internalTextView.delegate = self;
-    
-    [self sizeToFit];
-    
-    minNumberOfLines = m;
+    if (internalTextView.typingAttributes)
+    {
+        NSDictionary *attrs = internalTextView.typingAttributes;
+        
+        NSAttributedString *saveText = internalTextView.attributedText;
+        NSString *newText = @"-";
+        
+        internalTextView.delegate = nil;
+        internalTextView.hidden = YES;
+        
+        for (int i = 1; i < m; ++i)
+            newText = [newText stringByAppendingString:@"\n|W|"];
+        
+        NSAttributedString *newAttrText = [[NSAttributedString alloc] initWithString:newText attributes:attrs];
+        
+        internalTextView.attributedText = newAttrText;
+        
+        minHeight = [self measureHeight];
+        
+        internalTextView.attributedText = saveText;
+        internalTextView.typingAttributes = attrs;
+        internalTextView.hidden = NO;
+        internalTextView.delegate = self;
+        
+        [self sizeToFit];
+        
+        minNumberOfLines = m;
+    }
+    else
+    {
+        // Use internalTextView for height calculations, thanks to Gwynne <http://blog.darkrainfall.org/>
+        NSString *saveText = internalTextView.text, *newText = @"-";
+        
+        internalTextView.delegate = nil;
+        internalTextView.hidden = YES;
+        
+        for (int i = 1; i < m; ++i)
+            newText = [newText stringByAppendingString:@"\n|W|"];
+        
+        internalTextView.text = newText;
+        
+        minHeight = [self measureHeight];
+        
+        internalTextView.text = saveText;
+        internalTextView.hidden = NO;
+        internalTextView.delegate = self;
+        
+        [self sizeToFit];
+        
+        minNumberOfLines = m;
+    }
 }
 
 -(int)minNumberOfLines
@@ -439,6 +502,22 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+-(void)setAttributedText:(NSAttributedString *)attributedText
+{
+    internalTextView.attributedText = attributedText;
+    
+    // include this line to analyze the height of the textview.
+    // fix from Ankit Thakur
+    [self performSelector:@selector(textViewDidChange:) withObject:internalTextView];
+}
+
+-(NSAttributedString *)attributedText
+{
+    return internalTextView.attributedText;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
 -(void)setFont:(UIFont *)afont
 {
 	internalTextView.font= afont;
@@ -451,6 +530,21 @@
 {
 	return internalTextView.font;
 }	
+
+-(void)setTypingAttributes:(NSDictionary *)typingAttributes
+{
+    internalTextView.typingAttributes = typingAttributes;
+    
+    [self setMaxNumberOfLines:maxNumberOfLines];
+    [self setMinNumberOfLines:minNumberOfLines];
+
+}
+
+-(NSDictionary *)typingAttributes
+{
+    return internalTextView.typingAttributes;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
