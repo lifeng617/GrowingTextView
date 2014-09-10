@@ -30,13 +30,14 @@
 
 @interface HPGrowingTextView(private)
 -(void)commonInitialiser;
--(void)resizeTextView:(NSInteger)newSizeH;
+-(void)resizeTextViewWithHeight:(NSInteger)newSizeH;
 -(void)growDidStop;
 @end
 
 @implementation HPGrowingTextView
 @synthesize internalTextView;
 @synthesize delegate;
+@synthesize maxWidth;
 @synthesize maxHeight;
 @synthesize minHeight;
 @synthesize font;
@@ -110,7 +111,7 @@
     
     internalTextView.text = @"";
     
-    [self setMaxNumberOfLines:3];
+    [self setMaxNumberOfLines:100]; //infinite
 
     [self setPlaceholderColor:[UIColor lightGrayColor]];
     internalTextView.displayPlaceHolder = YES;
@@ -122,6 +123,32 @@
         size.height = minHeight;
     }
     return size;
+}
+
+- (void)sizeToFitAndNotify
+{
+    CGSize size = [self sizeThatFits:self.bounds.size];
+    if (!CGSizeEqualToSize(size, self.bounds.size))
+    {
+        if ([self.delegate respondsToSelector:@selector(growingTextView:willChangeSize:)]) {
+            [self.delegate growingTextView:self willChangeSize:size];
+        }
+        
+        CGRect internalTextViewFrame;;
+        
+        internalTextViewFrame = self.frame;
+        internalTextViewFrame.size = size; // + padding
+        self.frame = internalTextViewFrame;
+        
+        internalTextViewFrame.origin.y = contentInset.top - contentInset.bottom;
+        internalTextViewFrame.origin.x = contentInset.left;
+        
+        if(!CGRectEqualToRect(internalTextView.frame, internalTextViewFrame)) internalTextView.frame = internalTextViewFrame;
+        
+        if ([self.delegate respondsToSelector:@selector(growingTextView:didChangeSize:)]) {
+            [self.delegate growingTextView:self didChangeSize:size];
+        }
+    }
 }
 
 -(void)layoutSubviews
@@ -183,7 +210,7 @@
         internalTextView.hidden = NO;
         internalTextView.delegate = self;
         
-        [self sizeToFit];
+        [self sizeToFitAndNotify];
         
         maxNumberOfLines = n;
     }
@@ -206,7 +233,7 @@
         internalTextView.hidden = NO;
         internalTextView.delegate = self;
         
-        [self sizeToFit];
+        [self sizeToFitAndNotify];
         
         maxNumberOfLines = n;
     }
@@ -216,6 +243,11 @@
 -(int)maxNumberOfLines
 {
     return maxNumberOfLines;
+}
+
+- (void)setMaxWidth:(int)width
+{
+    maxWidth = width;
 }
 
 - (void)setMaxHeight:(int)height
@@ -253,7 +285,7 @@
         internalTextView.hidden = NO;
         internalTextView.delegate = self;
         
-        [self sizeToFit];
+        [self sizeToFitAndNotify];
         
         minNumberOfLines = m;
     }
@@ -276,7 +308,7 @@
         internalTextView.hidden = NO;
         internalTextView.delegate = self;
         
-        [self sizeToFit];
+        [self sizeToFitAndNotify];
         
         minNumberOfLines = m;
     }
@@ -316,12 +348,26 @@
 
 - (void)textViewDidChange:(UITextView *)textView
 {
-    [self refreshHeight];
+    [self refreshSize];
 }
 
-- (void)refreshHeight
+- (void)refreshSize
 {
 	//size of content, so we can set the frame of self
+    NSInteger newSizeW = self.frame.size.width;
+    if (self.maxWidth != 0)
+    {
+        NSInteger width = [self measureWidth];
+        
+        width = width > self.maxWidth ? self.maxWidth : width;
+        
+        if (width != newSizeW)
+        {
+            newSizeW = width;
+            [self resizeTextViewWithWidth:newSizeW];
+        }
+    }
+    
 	NSInteger newSizeH = [self measureHeight];
 	if (newSizeH < minHeight || !internalTextView.hasText) {
         newSizeH = minHeight; //not smalles than minHeight
@@ -359,12 +405,11 @@
                                         options:(UIViewAnimationOptionAllowUserInteraction|
                                                  UIViewAnimationOptionBeginFromCurrentState)                                 
                                      animations:^(void) {
-                                         [self resizeTextView:newSizeH];
+                                         [self resizeTextViewWithHeight:newSizeH];
                                      } 
                                      completion:^(BOOL finished) {
-                                         if ([delegate respondsToSelector:@selector(growingTextView:didChangeHeight:)]) {
-                                             [delegate growingTextView:self didChangeHeight:newSizeH];
-                                         }
+                                         if ([delegate respondsToSelector:@selector(growingTextViewDidChange:)])
+                                             [delegate growingTextView:self didChangeSize:self.frame.size];
                                      }];
 #endif
                 } else {
@@ -373,17 +418,16 @@
                     [UIView setAnimationDelegate:self];
                     [UIView setAnimationDidStopSelector:@selector(growDidStop)];
                     [UIView setAnimationBeginsFromCurrentState:YES];
-                    [self resizeTextView:newSizeH];
+                    [self resizeTextViewWithHeight:newSizeH];
                     [UIView commitAnimations];
                 }
             } else {
-                [self resizeTextView:newSizeH];                
+                [self resizeTextViewWithHeight:newSizeH];
                 // [fixed] The growingTextView:didChangeHeight: delegate method was not called at all when not animating height changes.
                 // thanks to Gwynne <http://blog.darkrainfall.org/>
                 
-                if ([delegate respondsToSelector:@selector(growingTextView:didChangeHeight:)]) {
-                    [delegate growingTextView:self didChangeHeight:newSizeH];
-                }	
+                if ([delegate respondsToSelector:@selector(growingTextViewDidChange:)])
+                    [delegate growingTextView:self didChangeSize:self.frame.size];
             }
 		}
 	}
@@ -421,6 +465,17 @@
     }
 }
 
+- (CGFloat)measureWidth
+{
+    if ([self respondsToSelector:@selector(snapshotViewAfterScreenUpdates:)])
+    {
+        return ceilf([self.internalTextView sizeThatFits:CGSizeMake(5000, 100)].width);
+    }
+    else {
+        return self.internalTextView.contentSize.width;
+    }
+}
+
 - (void)resetScrollPositionForIOS7
 {
     CGRect r = [internalTextView caretRectForPosition:internalTextView.selectedTextRange.end];
@@ -429,14 +484,34 @@
         internalTextView.contentOffset = CGPointMake(0, caretY);
 }
 
--(void)resizeTextView:(NSInteger)newSizeH
+- (void)resizeTextViewWithHeight:(NSInteger)newSizeH
 {
-    if ([delegate respondsToSelector:@selector(growingTextView:willChangeHeight:)]) {
-        [delegate growingTextView:self willChangeHeight:newSizeH];
-    }
+    
+    
+    if ([delegate respondsToSelector:@selector(growingTextView:willChangeSize:)])
+        [delegate growingTextView:self willChangeSize:CGSizeMake(self.frame.size.width, newSizeH)];
     
     CGRect internalTextViewFrame = self.frame;
+    
     internalTextViewFrame.size.height = newSizeH; // + padding
+    self.frame = internalTextViewFrame;
+    
+    internalTextViewFrame.origin.y = contentInset.top - contentInset.bottom;
+    internalTextViewFrame.origin.x = contentInset.left;
+    
+    if(!CGRectEqualToRect(internalTextView.frame, internalTextViewFrame)) internalTextView.frame = internalTextViewFrame;
+}
+
+- (void)resizeTextViewWithWidth:(NSInteger)newSizeW
+{
+    
+    if ([delegate respondsToSelector:@selector(growingTextView:willChangeSize:)])
+        [delegate growingTextView:self willChangeSize:CGSizeMake(newSizeW, self.frame.size.height)];
+    
+    CGRect internalTextViewFrame = self.frame;
+    
+    internalTextViewFrame = self.frame;
+    internalTextViewFrame.size.width = newSizeW; // + padding
     self.frame = internalTextViewFrame;
     
     internalTextViewFrame.origin.y = contentInset.top - contentInset.bottom;
@@ -453,9 +528,8 @@
         [self resetScrollPositionForIOS7];
     }
     
-	if ([delegate respondsToSelector:@selector(growingTextView:didChangeHeight:)]) {
-		[delegate growingTextView:self didChangeHeight:self.frame.size.height];
-	}
+    if ([delegate respondsToSelector:@selector(growingTextView:didChangeSize:)])
+        [delegate growingTextView:self didChangeSize:self.frame.size];
 }
 
 -(void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event

@@ -48,8 +48,8 @@
 - (BOOL)growingTextView:(HPGrowingTextView *)growingTextView shouldChangeTextInRange:(NSRange)range replacementText:(NSString *)text;
 - (void)growingTextViewDidChange:(HPGrowingTextView *)growingTextView;
 
-- (void)growingTextView:(HPGrowingTextView *)growingTextView willChangeHeight:(float)height;
-- (void)growingTextView:(HPGrowingTextView *)growingTextView didChangeHeight:(float)height;
+- (void)growingTextView:(HPGrowingTextView *)growingTextView willChangeSize:(CGSize)size;
+- (void)growingTextView:(HPGrowingTextView *)growingTextView didChangeSize:(CGSize)size;
 
 - (void)growingTextViewDidChangeSelection:(HPGrowingTextView *)growingTextView;
 - (BOOL)growingTextViewShouldReturn:(HPGrowingTextView *)growingTextView;
@@ -60,6 +60,7 @@
 	
 	int minHeight;
 	int maxHeight;
+    int maxWidth;
 	
 	//class properties
 	int maxNumberOfLines;
@@ -84,6 +85,7 @@
 @property int maxNumberOfLines;
 @property int minNumberOfLines;
 @property (nonatomic) int maxHeight;
+@property (nonatomic) int maxWidth;
 @property (nonatomic) int minHeight;
 @property BOOL animateHeightChange;
 @property NSTimeInterval animationDuration;
@@ -123,6 +125,6 @@
 - (void)scrollRangeToVisible:(NSRange)range;
 
 // call to force a height change (e.g. after you change max/min lines)
-- (void)refreshHeight;
+- (void)refreshSize;
 
 @end
