@@ -134,14 +134,15 @@
             [self.delegate growingTextView:self willChangeSize:size];
         }
         
-        CGRect internalTextViewFrame;;
+        CGRect internalTextViewFrame;
         
         internalTextViewFrame = self.frame;
         internalTextViewFrame.size = size; // + padding
         self.frame = internalTextViewFrame;
         
-        internalTextViewFrame.origin.y = contentInset.top - contentInset.bottom;
+        internalTextViewFrame.origin.y = contentInset.top;
         internalTextViewFrame.origin.x = contentInset.left;
+        internalTextViewFrame.size.height -= (contentInset.top + contentInset.bottom);
         
         if(!CGRectEqualToRect(internalTextView.frame, internalTextViewFrame)) internalTextView.frame = internalTextViewFrame;
         
@@ -156,8 +157,9 @@
     [super layoutSubviews];
     
 	CGRect r = self.bounds;
-	r.origin.y = 0;
+	r.origin.y = contentInset.top;
 	r.origin.x = contentInset.left;
+    r.size.height -= (contentInset.top + contentInset.bottom);
     r.size.width -= contentInset.left + contentInset.right;
     
     internalTextView.frame = r;
@@ -168,9 +170,10 @@
     contentInset = inset;
     
     CGRect r = self.frame;
-    r.origin.y = inset.top - inset.bottom;
-    r.origin.x = inset.left;
-    r.size.width -= inset.left + inset.right;
+    r.origin.y = contentInset.top;
+    r.origin.x = contentInset.left;
+    r.size.height -= (contentInset.top + contentInset.bottom);
+    r.size.width -= contentInset.left + contentInset.right;
     
     internalTextView.frame = r;
     
@@ -489,15 +492,16 @@
     
     
     if ([delegate respondsToSelector:@selector(growingTextView:willChangeSize:)])
-        [delegate growingTextView:self willChangeSize:CGSizeMake(self.frame.size.width, newSizeH)];
+        [delegate growingTextView:self willChangeSize:CGSizeMake(self.frame.size.width, newSizeH + (contentInset.top + contentInset.bottom))];
     
     CGRect internalTextViewFrame = self.frame;
     
-    internalTextViewFrame.size.height = newSizeH; // + padding
+    internalTextViewFrame.size.height = newSizeH + (contentInset.top + contentInset.bottom); // + padding
     self.frame = internalTextViewFrame;
     
-    internalTextViewFrame.origin.y = contentInset.top - contentInset.bottom;
+    internalTextViewFrame.origin.y = contentInset.top;
     internalTextViewFrame.origin.x = contentInset.left;
+    internalTextViewFrame.size.height -= (contentInset.top + contentInset.bottom);
     
     if(!CGRectEqualToRect(internalTextView.frame, internalTextViewFrame)) internalTextView.frame = internalTextViewFrame;
 }
@@ -514,8 +518,9 @@
     internalTextViewFrame.size.width = newSizeW; // + padding
     self.frame = internalTextViewFrame;
     
-    internalTextViewFrame.origin.y = contentInset.top - contentInset.bottom;
+    internalTextViewFrame.origin.y = contentInset.top;
     internalTextViewFrame.origin.x = contentInset.left;
+    internalTextViewFrame.size.height -= (contentInset.top + contentInset.bottom);
     
     if(!CGRectEqualToRect(internalTextView.frame, internalTextViewFrame)) internalTextView.frame = internalTextViewFrame;
 }
